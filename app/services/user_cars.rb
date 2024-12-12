@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class FindCars
+class UserCars
   DEFAULT_PER_PAGE = 20
 
   def self.call(**kwargs)
@@ -16,28 +16,27 @@ class FindCars
   end
 
   def call
-    cars_scope = Car.includes(:brand).joins(:brand)
-    cars_scope = cars_scope.where('price BETWEEN ? and ?', Integer(price_min), Integer(price_max)) if price_min && price_max
-    cars_scope = cars_scope.where("brands.name ILIKE ?", "%#{query}%") if query.present?
-    cars_scope = cars_scope.limit(DEFAULT_PER_PAGE).offset((Integer(page) - 1) * DEFAULT_PER_PAGE)
+    cars_scope = FindCars.call(query: query, price_min: price_min, price_max: price_max, page: page)
 
     serialized_cars = cars_scope.map do |car|
       serialize_car(car: car, rank_score: rank_score(car), label: recommendation_label(car))
     end
 
-    serialized_cars.sort_by(&method(:sort_cars_by))
+    serialized_cars.sort_by!(&method(:sort_cars_by))
+
+    serialized_cars[offset..(offset + DEFAULT_PER_PAGE)]
   end
 
   private
 
   attr_reader :user_id, :query, :price_min, :price_max, :page
 
-  def user
-    @user ||= User.includes(:preferred_brands).find(user_id)
+  def offset
+    (Integer(page) - 1) * DEFAULT_PER_PAGE
   end
 
   def rank_score(car)
-    car_recommendations.fetch(car.id, {})[:rank_score]
+    user_recommended_cars.fetch(car.id, {})[:rank_score]
   end
 
   def recommendation_label(car)
@@ -51,23 +50,27 @@ class FindCars
     end
   end
 
-  def car_recommendations
-    @car_recommendations ||= CarRecommendations.call(user_id: user_id).index_by { |r| r[:car_id] }
+  def user
+    @user ||= User.includes(:preferred_brands).find(user_id)
+  end
+
+  def user_recommended_cars
+    @user_recommended_cars ||= UserRecommendedCars.call(user_id: user_id).index_by { |r| r[:car_id] }
   end
 
   def serialize_car(car:, rank_score: nil, label:)
     car_attributes = car.as_json(only: [:id, :model, :price], include: {brand: {only: [:id, :name]}})
-    car_attributes[:rank_score] = rank_score
-    car_attributes[:label] = label
+    car_attributes['rank_score'] = rank_score
+    car_attributes['label'] = label
 
     car_attributes
   end
 
   def sort_cars_by(car)
     [
-      recommendation_label_priority(car[:label]),
-      car[:rank_score] ? -car[:rank_score] : Float::INFINITY,
-      car[:price]
+      recommendation_label_priority(car['label']),
+      car['rank_score'] ? -car['rank_score'] : Float::INFINITY,
+      car['price']
     ]
   end
 

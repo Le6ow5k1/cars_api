@@ -6,14 +6,14 @@ RSpec.describe "Api::Cars", type: :request do
     let!(:car_audi_a7) { create(:car, brand: brand_audi, model: 'A7') }
     let!(:user) { create(:user, preferred_brands: [brand_audi]) }
 
-    let(:car_recommendations_response) do
+    let(:user_recommended_cars_response) do
       [
         {car_id: car_audi_a7.id, rank_score: 0.945},
       ]
     end
 
     before do
-      allow(CarRecommendations).to receive(:call).and_return(car_recommendations_response)
+      allow(UserRecommendedCars).to receive(:call).and_return(user_recommended_cars_response)
     end
 
     context 'when no parameters are specified' do
@@ -163,7 +163,7 @@ RSpec.describe "Api::Cars", type: :request do
       let!(:car_bmw_x6) { create(:car, brand: brand_bmw, model: 'X6', price: 79_999) }
       let!(:user) { create(:user, preferred_brands: [brand_audi, brand_suzuki, brand_bmw]) }
 
-      let(:car_recommendations_response) do
+      let(:user_recommended_cars_response) do
         [
           {car_id: car_audi_a7.id, rank_score: 0.945},
           {car_id: car_suzuki_jimny.id, rank_score: 0.8},

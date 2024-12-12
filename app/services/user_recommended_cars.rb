@@ -2,7 +2,7 @@
 
 require 'net/http'
 
-class CarRecommendations
+class UserRecommendedCars
   BASE_URL = 'https://bravado-images-production.s3.amazonaws.com/recomended_cars.json'
 
   def self.call(**kwargs)
