@@ -16,10 +16,10 @@ class FindCars
   end
 
   def call
-    cars_scope = Car.includes(:brand)
+    cars_scope = Car.includes(:brand).joins(:brand)
     cars_scope = cars_scope.where('price BETWEEN ? and ?', Integer(price_min), Integer(price_max)) if price_min && price_max
-    cars_scope = cars_scope.where("brands.name ILIKE '%?%'", query) if query.present?
-    cars_scope = cars_scope.limit(DEFAULT_PER_PAGE).offset((page - 1) * DEFAULT_PER_PAGE)
+    cars_scope = cars_scope.where("brands.name ILIKE ?", "%#{query}%") if query.present?
+    cars_scope = cars_scope.limit(DEFAULT_PER_PAGE).offset((Integer(page) - 1) * DEFAULT_PER_PAGE)
 
     serialized_cars = cars_scope.map do |car|
       serialize_car(car: car, rank_score: rank_score(car), label: recommendation_label(car))
@@ -33,7 +33,7 @@ class FindCars
   attr_reader :user_id, :query, :price_min, :price_max, :page
 
   def user
-    @user ||= User.find(user_id)
+    @user ||= User.includes(:preferred_brands).find(user_id)
   end
 
   def rank_score(car)
@@ -52,7 +52,7 @@ class FindCars
   end
 
   def car_recommendations
-    @car_recommendations ||= CarRecommendations.call(user_id: user_id).index_by { |r| r[:id] }
+    @car_recommendations ||= CarRecommendations.call(user_id: user_id).index_by { |r| r[:car_id] }
   end
 
   def serialize_car(car:, rank_score: nil, label:)
