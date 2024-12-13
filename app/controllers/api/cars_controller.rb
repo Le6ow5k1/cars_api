@@ -1,6 +1,6 @@
 class Api::CarsController < ApplicationController
   def index
-    cars = UserCars.call(**find_cars_params)
+    cars = FindUserCars.call(**find_cars_params)
 
     render json: cars
   end

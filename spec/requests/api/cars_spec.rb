@@ -6,14 +6,8 @@ RSpec.describe "Api::Cars", type: :request do
     let!(:car_audi_a7) { create(:car, brand: brand_audi, model: 'A7') }
     let!(:user) { create(:user, preferred_brands: [brand_audi]) }
 
-    let(:user_recommended_cars_response) do
-      [
-        {car_id: car_audi_a7.id, rank_score: 0.945},
-      ]
-    end
-
     before do
-      allow(UserRecommendedCars).to receive(:call).and_return(user_recommended_cars_response)
+      create(:user_recommended_car, user: user, car: car_audi_a7, rank_score: 0.945)
     end
 
     context 'when no parameters are specified' do
@@ -101,14 +95,15 @@ RSpec.describe "Api::Cars", type: :request do
 
     context 'when page parameter is provided' do
       let!(:brand_suzuki) { create(:brand, name: 'Suzuki') }
-      let!(:suzuki_cars) { create_list(:car, 20, brand: brand_suzuki, model: 'Jimny', price: 29_999) }
+      let!(:suzuki_cars) { create_list(:car, 19, brand: brand_suzuki, model: 'Jimny', price: 29_999) }
+      let!(:most_expensive_suzuki_car) { create(:car, brand: brand_suzuki, model: 'Jimny', price: 79_999) }
 
       let(:expected_response) do
         [
           {
-            "id" => suzuki_cars.last.id,
-            "model" => suzuki_cars.last.model,
-            "price" => 29_999,
+            "id" => most_expensive_suzuki_car.id,
+            "model" => most_expensive_suzuki_car.model,
+            "price" => 79_999,
             "brand" => {
               "id" => brand_suzuki.id,
               "name" => "Suzuki",
@@ -119,35 +114,7 @@ RSpec.describe "Api::Cars", type: :request do
         ]
       end
 
-      it "returns only cars from brands that match the query" do
-        get "/api/cars", params: {user_id: user.id, page: 2}
-
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body)).to match_array(expected_response)
-      end
-    end
-
-    context 'when page parameter is provided' do
-      let!(:brand_suzuki) { create(:brand, name: 'Suzuki') }
-      let!(:suzuki_cars) { create_list(:car, 20, brand: brand_suzuki, model: 'Jimny', price: 29_999) }
-
-      let(:expected_response) do
-        [
-          {
-            "id" => suzuki_cars.last.id,
-            "model" => suzuki_cars.last.model,
-            "price" => 29_999,
-            "brand" => {
-              "id" => brand_suzuki.id,
-              "name" => "Suzuki",
-            },
-            "rank_score" => nil,
-            "label" => nil,
-          }
-        ]
-      end
-
-      it "returns only cars from brands that match the query" do
+      it "returns cars from the specified page" do
         get "/api/cars", params: {user_id: user.id, page: 2}
 
         expect(response).to have_http_status(:success)
@@ -163,13 +130,10 @@ RSpec.describe "Api::Cars", type: :request do
       let!(:car_bmw_x6) { create(:car, brand: brand_bmw, model: 'X6', price: 79_999) }
       let!(:user) { create(:user, preferred_brands: [brand_audi, brand_suzuki, brand_bmw]) }
 
-      let(:user_recommended_cars_response) do
-        [
-          {car_id: car_audi_a7.id, rank_score: 0.945},
-          {car_id: car_suzuki_jimny.id, rank_score: 0.8},
-          {car_id: car_suzuki_vitara.id, rank_score: 0.8},
-          {car_id: car_bmw_x6.id, rank_score: 0.8},
-        ]
+      before do
+        create(:user_recommended_car, user: user, car: car_suzuki_jimny, rank_score: 0.8)
+        create(:user_recommended_car, user: user, car: car_suzuki_vitara, rank_score: 0.8)
+        create(:user_recommended_car, user: user, car: car_bmw_x6, rank_score: 0.8)
       end
 
       let(:expected_response) do
@@ -221,7 +185,7 @@ RSpec.describe "Api::Cars", type: :request do
         ]
       end
 
-      it "returns only cars from brands that match the query" do
+      it "returns the cars in the correct order" do
         get "/api/cars", params: {user_id: user.id}
 
         expect(response).to have_http_status(:success)
