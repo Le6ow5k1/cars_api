@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2024_12_12_115821) do
+ActiveRecord::Schema.define(version: 2024_12_12_152718) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -40,6 +40,15 @@ ActiveRecord::Schema.define(version: 2024_12_12_115821) do
     t.index ["user_id"], name: "index_user_preferred_brands_on_user_id"
   end
 
+  create_table "user_recommended_cars", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "car_id", null: false
+    t.decimal "rank_score", precision: 5, scale: 4
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["user_id", "car_id"], name: "uniq_user_recommended_cars", unique: true
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email"
     t.int8range "preferred_price_range"
@@ -50,4 +59,6 @@ ActiveRecord::Schema.define(version: 2024_12_12_115821) do
   add_foreign_key "cars", "brands"
   add_foreign_key "user_preferred_brands", "brands"
   add_foreign_key "user_preferred_brands", "users"
+  add_foreign_key "user_recommended_cars", "cars"
+  add_foreign_key "user_recommended_cars", "users"
 end
